@@ -1,0 +1,15 @@
+# config/config.yml
+ai:
+  model: "qwen2.5:32b"
+  host: "http://localhost:11434"
+  temperature: 0.1
+  timeout: 300
+  num_ctx: 8192
+
+logging:
+  level: INFO
+  file: logs/invo.log
+
+nmap:
+  timeout: 300
+  max_retries: 2
