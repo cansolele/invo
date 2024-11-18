@@ -70,7 +70,7 @@ class HTMLReportGenerator:
 </body>
 </html>"""
 
-    def generate(self, data):
+    def generate(self, data, report_path):
         """Generate HTML report from scan data"""
         try:
             lang = "ru" if self.use_russian else "en"
@@ -96,11 +96,7 @@ class HTMLReportGenerator:
             # Save the report
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_dir = "reports"
-            os.makedirs(report_dir, exist_ok=True)
-            report_path = os.path.join(
-                report_dir, f"recon_{data['target']}_{timestamp}.html"
-            )
-
+            os.makedirs(os.path.dirname(report_path), exist_ok=True)
             with open(report_path, "w", encoding="utf-8") as f:
                 f.write(report_content)
 
