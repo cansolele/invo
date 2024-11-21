@@ -2,48 +2,59 @@
 import os
 from datetime import datetime
 from utils.report_generator import HTMLReportGenerator
+from utils.console_logger import ConsoleLogger
 
 
 class Recon:
-    def __init__(self, ai_handler, command_executor, use_russian=False):
+    def __init__(self, ai_handler, command_executor, use_russian=False, verbose=False):
         """Initialize Recon module"""
         self.ai_handler = ai_handler
         self.command_executor = command_executor
+        self.command_executor.set_verbose(verbose)
         self.report_generator = HTMLReportGenerator(use_russian)
+        self.logger = ConsoleLogger(use_russian, verbose)
         self.use_russian = use_russian
 
     def perform_recon(self, domain):
         """Perform reconnaissance on target domain"""
-        # Create timestamp for this scan session
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Create directory structure for reports
-        base_dir = os.path.join("reports", f"{domain}_{timestamp}")
-        recon_dir = os.path.join(base_dir, "reconnaissance")
-        nmap_dir = os.path.join(recon_dir, "nmap")
+        try:
+            # Create directory structure for reports
+            self.logger.log("creating_directory")
+            base_dir = os.path.join("reports", f"{domain}_{timestamp}")
+            recon_dir = os.path.join(base_dir, "reconnaissance")
+            nmap_dir = os.path.join(recon_dir, "nmap")
+            os.makedirs(nmap_dir, exist_ok=True)
 
-        # Create directories
-        os.makedirs(nmap_dir, exist_ok=True)
+            # Start nmap scan
+            self.logger.log("start_scan", "nmap", domain=domain)
+            scan_data = self._run_nmap_scan(domain)
 
-        # Perform nmap scan and analysis
-        scan_data = self._run_nmap_scan(domain)
+            # Save raw output
+            raw_output_path = os.path.join(nmap_dir, "nmap_output.txt")
+            with open(raw_output_path, "w", encoding="utf-8") as f:
+                f.write(scan_data["raw_output"])
 
-        # Save raw nmap output
-        raw_output_path = os.path.join(nmap_dir, "nmap_output.txt")
-        with open(raw_output_path, "w", encoding="utf-8") as f:
-            f.write(scan_data["raw_output"])
+            # Generate report
+            self.logger.log("generating_report", "nmap")
+            report_path = os.path.join(nmap_dir, "nmap_ai.html")
+            scan_data["report_dir"] = nmap_dir
+            self.report_generator.generate(scan_data, report_path)
+            self.logger.log("report_complete", "nmap", path=report_path)
 
-        # Generate AI analysis report
-        scan_data["report_dir"] = nmap_dir
-        self.report_generator.generate(
-            scan_data, os.path.join(nmap_dir, "nmap_ai.html")
-        )
+            return scan_data
 
-        return scan_data
+        except Exception as e:
+            self.logger.log_error("nmap", str(e))
+            raise
 
     def _run_nmap_scan(self, domain):
         """Execute nmap scan and analyze results"""
-        command_prompt = f"""Generate efficient nmap command for scanning {domain}.
+        try:
+            # Generate command
+            self.logger.log("generating_command", "nmap")
+            command_prompt = f"""Generate efficient nmap command for scanning {domain}.
 Requirements:
 - Fast but thorough scan
 - Version detection (-sV)
@@ -51,10 +62,19 @@ Requirements:
 - Fast timing (use -T4)
 Return ONLY the command itself."""
 
-        try:
             recon_command = self.ai_handler.get_command(command_prompt).strip()
-            scan_output = self.command_executor.execute(recon_command)
+            self.logger.log("command_generated", "nmap", command=recon_command)
 
+            # Execute scan
+            self.logger.log("starting_tool", "nmap")
+            scan_output = self.command_executor.execute(recon_command)
+            self.logger.log_tool_output(
+                "nmap", scan_output
+            )  # Убедимся, что этот вызов работает
+            self.logger.log("scan_complete", "nmap")
+
+            # Analyze results
+            self.logger.log("analyzing_results", "nmap")
             if self.use_russian:
                 analysis_prompt = f"""### Инструкция ###
 Вы - эксперт по безопасности. Проанализируйте ПОЛНЫЙ вывод сканирования nmap.
@@ -101,6 +121,7 @@ RECOMMENDATIONS
 
             analysis = self.ai_handler.analyze_output(analysis_prompt)
             analysis = self._clean_analysis_text(analysis)
+            self.logger.log("analysis_complete", "nmap")
 
             return {
                 "target": domain,
@@ -113,10 +134,8 @@ RECOMMENDATIONS
             }
 
         except Exception as e:
-            error_msg = (
-                "Ошибка сканирования Nmap" if self.use_russian else "Nmap scan failed"
-            )
-            raise Exception(f"{error_msg}: {str(e)}")
+            self.logger.log_error("nmap", str(e))
+            raise
 
     def _clean_analysis_text(self, text):
         """Remove any markup or special formatting from text"""

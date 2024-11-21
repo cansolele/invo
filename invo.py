@@ -12,8 +12,6 @@ from utils.logger import setup_logger
 
 
 class InvoPentest:
-    """Main class for AI-powered penetration testing tool"""
-
     def __init__(self, use_russian=False):
         """Initialize the penetration testing tool"""
         try:
@@ -42,7 +40,7 @@ class InvoPentest:
 
     def run_reconnaissance(self, domain, verbose=False):
         """Run reconnaissance mode"""
-        recon = Recon(self.ai_handler, self.command_executor, self.use_russian)
+        recon = Recon(self.ai_handler, self.command_executor, self.use_russian, verbose)
         return recon.perform_recon(domain)
 
     def run(self, domain, mode, verbose=False):
@@ -78,6 +76,10 @@ class InvoPentest:
 
 def main():
     """Main entry point"""
+    # Set default encoding
+    if sys.stdout.encoding != "utf-8":
+        sys.stdout.reconfigure(encoding="utf-8")
+
     # Prepare help messages
     description = {
         "tool": {

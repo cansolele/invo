@@ -13,6 +13,10 @@ class HTMLReportGenerator:
                 "scan_time": "Scan Time",
                 "scan_command": "Scan Command",
                 "security_analysis": "Security Analysis",
+                "tool_types": {
+                    "nmap": "Network Mapper (Nmap)",
+                    "sudomy": "Subdomain Enumeration Tool",
+                },
                 "headers": {
                     "EXECUTIVE SUMMARY": "Executive Summary",
                     "DETECTED SERVICES": "Detected Services",
@@ -26,6 +30,10 @@ class HTMLReportGenerator:
                 "scan_time": "Время сканирования",
                 "scan_command": "Команда сканирования",
                 "security_analysis": "Анализ безопасности",
+                "tool_types": {
+                    "nmap": "Сетевой сканер (Nmap)",
+                    "sudomy": "Инструмент перечисления поддоменов",
+                },
                 "headers": {
                     "КРАТКИЕ ВЫВОДЫ": "Краткие выводы",
                     "ОБНАРУЖЕННЫЕ СЕРВИСЫ": "Обнаруженные сервисы",
@@ -46,7 +54,14 @@ class HTMLReportGenerator:
     <div class="container mx-auto px-4 py-8 max-w-5xl">
         <!-- Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 mb-6">
-            <h1 class="text-3xl font-bold text-white mb-2">{title}</h1>
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-4xl font-bold text-white">INVO</h1>
+                <div class="flex items-center gap-2">
+                    <span class="bg-blue-500 text-white px-3 py-1 rounded-l text-sm">AI-Powered Pentesting Tool</span>
+                    <span class="bg-green-500 text-white px-3 py-1 rounded-r text-sm">{tool_type}</span>
+                </div>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-2">{title}</h2>
             <p class="text-lg text-white">{target_label}: {target}</p>
             <p class="text-sm text-white opacity-80">{scan_time_label}: {scan_time}</p>
         </div>
@@ -76,6 +91,11 @@ class HTMLReportGenerator:
             lang = "ru" if self.use_russian else "en"
             trans = self.translations[lang]
 
+            # Get tool type name
+            tool_type = trans["tool_types"].get(
+                data["scan_type"], data["scan_type"].upper()
+            )
+
             # Format analysis text with section headers
             analysis = self._format_analysis_sections(data["analysis"], lang)
 
@@ -91,6 +111,7 @@ class HTMLReportGenerator:
                 security_analysis=trans["security_analysis"],
                 command=data["command"],
                 analysis=analysis,
+                tool_type=tool_type,
             )
 
             # Save the report

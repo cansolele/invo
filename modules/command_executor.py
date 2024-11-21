@@ -1,11 +1,17 @@
 # modules/command_executor.py
 import subprocess
-import shlex
-import os
 import time
 
 
 class CommandExecutor:
+    def __init__(self):
+        """Initialize command executor"""
+        self.verbose = False
+
+    def set_verbose(self, verbose):
+        """Set verbose mode"""
+        self.verbose = verbose
+
     def execute(self, command):
         """Execute system command and return output"""
         try:
@@ -13,8 +19,6 @@ class CommandExecutor:
             command = command.replace("sudo sudo", "sudo")
             if command.startswith("nmap") and not command.startswith("sudo"):
                 command = f"sudo {command}"
-
-            print(f"Executing command: {command}")
 
             # Start process
             process = subprocess.Popen(
@@ -27,49 +31,22 @@ class CommandExecutor:
                 universal_newlines=True,
             )
 
-            output = []
-            start_time = time.time()
-
-            while True:
-                # Check if process has finished
-                return_code = process.poll()
-
-                # Read output
-                for line in process.stdout:
-                    print(f"Output: {line.strip()}")
-                    output.append(line)
-
-                # Read errors
-                for line in process.stderr:
-                    print(f"Error: {line.strip()}")
-                    output.append(f"ERROR: {line}")
-
-                # Show elapsed time every 30 seconds
-                if int(time.time() - start_time) % 30 == 0:
-                    elapsed = int(time.time() - start_time)
-                    print(f"Scan in progress... ({elapsed} seconds elapsed)")
-
-                # Check if process has finished
-                if return_code is not None:
-                    break
-
-                time.sleep(1)
-
-            # Get any remaining output
+            # Collect output
             stdout, stderr = process.communicate()
-            if stdout:
-                output.append(stdout)
+
+            # Check return code
+            if process.returncode != 0:
+                raise subprocess.CalledProcessError(process.returncode, command, stderr)
+
+            # Combine stdout and stderr if there are any errors
+            output = stdout
             if stderr:
-                output.append(f"ERROR: {stderr}")
+                output += f"\nERRORS:\n{stderr}"
 
-            if return_code != 0:
-                raise subprocess.CalledProcessError(return_code, command)
-
-            result = "\n".join(output).strip()
-            if not result:
+            if not output.strip():
                 raise Exception("Command produced no output")
 
-            return result
+            return output.strip()
 
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr if e.stderr else str(e)
